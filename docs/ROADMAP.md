@@ -22,8 +22,10 @@
 学到的：**轨迹预测**。正着用是接球（预测球会经过哪里），反着用是投篮（算出手速度）。
 
 ### 练习 2：逆运动学 IK，让末端到达指定位置（1 天）
-- [ ] 运行官方教程 `D:\isaacsim\standalone_examples\tutorials\manipulation\tutorial_9_follow_target.py`，在界面里拖动目标方块，观察末端跟随
-- [ ] 读懂它是怎么把"末端目标位置"变成 7 个关节角的
+- [ ] 运行官方示例 `D:\isaacsim\standalone_examples\api\isaacsim.core.experimental.api\control_robot_numpy.py`
+      （Franka + 纯 numpy 写的微分 IK，逻辑全部可见。注：`tutorials\manipulation\tutorial_9_follow_target.py` 用的是 UR10e，不是 Franka）
+- [ ] 读懂它是怎么把"末端目标位置"变成 7 个关节角的（雅可比矩阵 + 阻尼最小二乘，每帧迭代一小步）
+- [ ] （可选）拖动版：`D:\isaacsim\standalone_examples\api\isaacsim.robot_motion.examples\manipulation\follow_target.py --robot franka`（cuMotion RMPflow，黑盒但带避障）
 - [ ] 写 `scripts/02_ik_reach.py`：让夹爪移动到练习 1 的绿点，并打印末端的实际位置和误差
 - [ ] 测一下：从 ready 姿态移动到绿点要多久？（接球任务的时间预算）
 
