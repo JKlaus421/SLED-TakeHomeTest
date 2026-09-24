@@ -45,13 +45,14 @@ from isaacsim.storage.native import get_assets_root_path
 from pxr import Gf, UsdGeom
 
 G = 9.81  # 重力加速度，沿 -z 方向
+DT = 1 / 60  # 物理步长（秒）：仿真每一步前进的时间，由练习 1 的误差数据反推得出
 
 # ======================================================================
 #  TODO：你来实现这两个函数
 # ======================================================================
 
 
-def launch_velocity(p0: np.ndarray, p_target: np.ndarray, T: float, g: float = G) -> np.ndarray:
+def launch_velocity(p0: np.ndarray, p_target: np.ndarray, T: float, g: float = G, dt: float = DT) -> np.ndarray:
     """给定起点 p0、目标点 p_target、飞行时间 T，返回初速度 v0 = [vx, vy, vz]。
 
     提示：
@@ -63,16 +64,17 @@ def launch_velocity(p0: np.ndarray, p_target: np.ndarray, T: float, g: float = G
       可以用 numpy 向量一次算完三个分量。
     """
     v0 = (p_target - p0) / T
-    v0[2] += 0.5 * g *T
+    # 重力补偿 ½gT，再加离散积分多掉的 ½g·dt（注意这一项不乘时间）
+    v0[2] += 0.5 * g * T + 0.5 * g * dt
     return v0
 
 
-def predict_position(p0: np.ndarray, v0: np.ndarray, t: float, g: float = G) -> np.ndarray:
+def predict_position(p0: np.ndarray, v0: np.ndarray, t: float, g: float = G, dt: float = DT) -> np.ndarray:
     """给定起点、初速度，返回 t 秒后球的理论位置 [x, y, z]。"""
     # 三个方向先都按匀速直线运动算：p = p0 + v0·t（numpy 会逐元素计算 x、y、z）
     p = p0 + v0 * t
-    # 只有 z 方向受重力，额外往下掉 ½·g·t²
-    p[2] -= 0.5 * g * t**2
+    # 只有 z 方向受重力：连续公式往下掉 ½·g·t²，离散积分每秒再多掉 ½·g·dt
+    p[2] -= 0.5 * g * t**2 + 0.5 * g * dt * t
     return p
 
 
