@@ -62,12 +62,18 @@ def launch_velocity(p0: np.ndarray, p_target: np.ndarray, T: float, g: float = G
       令 t = T 时 (x, y, z) = p_target，分别解出 vx, vy, vz。
       可以用 numpy 向量一次算完三个分量。
     """
-    raise NotImplementedError("TODO: 实现 launch_velocity（见函数说明里的提示）")
+    v0 = (p_target - p0) / T
+    v0[2] += 0.5 * g *T
+    return v0
 
 
 def predict_position(p0: np.ndarray, v0: np.ndarray, t: float, g: float = G) -> np.ndarray:
     """给定起点、初速度，返回 t 秒后球的理论位置 [x, y, z]。"""
-    raise NotImplementedError("TODO: 实现 predict_position")
+    # 三个方向先都按匀速直线运动算：p = p0 + v0·t（numpy 会逐元素计算 x、y、z）
+    p = p0 + v0 * t
+    # 只有 z 方向受重力，额外往下掉 ½·g·t²
+    p[2] -= 0.5 * g * t**2
+    return p
 
 
 # ======================================================================
