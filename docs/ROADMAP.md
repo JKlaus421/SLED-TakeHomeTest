@@ -24,16 +24,16 @@
 ### 练习 2：逆运动学 IK，让末端到达指定位置（1 天）
 - [ ] 运行官方示例 `D:\isaacsim\standalone_examples\api\isaacsim.core.experimental.api\control_robot_numpy.py`
       （Franka + 纯 numpy 写的微分 IK，逻辑全部可见。注：`tutorials\manipulation\tutorial_9_follow_target.py` 用的是 UR10e，不是 Franka）
-- [ ] 读懂它是怎么把"末端目标位置"变成 7 个关节角的（雅可比矩阵 + 阻尼最小二乘，每帧迭代一小步）
+- [x] 读懂它是怎么把"末端目标位置"变成 7 个关节角的（雅可比矩阵 + 阻尼最小二乘，每帧迭代一小步）
 - [ ] （可选）拖动版：`D:\isaacsim\standalone_examples\api\isaacsim.robot_motion.examples\manipulation\follow_target.py --robot franka`（cuMotion RMPflow，黑盒但带避障）
-- [ ] 写 `scripts/02_ik_reach.py`：让夹爪移动到练习 1 的绿点，并打印末端的实际位置和误差
-- [ ] 测一下：从 ready 姿态移动到绿点要多久？（接球任务的时间预算）
+- [x] 写 `scripts/02_ik_reach.py`：让夹爪移动到练习 1 的绿点，并打印末端的实际位置和误差
+- [x] 测一下：从 ready 姿态移动到绿点要多久？→ 到 1 cm 内需 0.6~1.2 s（比练习 1 的球飞行时间 0.6 s 还长！）
 
 学到的：**末端到达指定位置**。三个任务都要用。
 
 ### 练习 3：夹爪开合（半天）
-- [ ] 运行 `tutorial_9_gripper_control.py`，读懂手指的 2 个自由度怎么控制
-- [ ] 写 `scripts/03_gripper.py`：夹爪移到球的位置 → 合上 → 抬起，确认球被夹住没有滑掉
+- [x] ~~`tutorial_9_gripper_control.py`~~（用的是 UR10e 夹爪，跳过）。Franka 手指 = DOF 7、8，平移关节，每根 0~0.04 m
+- [x] 写 `scripts/03_gripper.py`：状态机 approach → descend → close → lift → hold，3/3 成功（公共代码抽到 `scripts/franka_utils.py`）
 
 学到的：**抓住与松开的时机**。接球（合上）和投篮（松开）都需要。
 
