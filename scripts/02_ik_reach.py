@@ -171,6 +171,9 @@ for i, target in enumerate(targets):
 
         # 3) 解出关节增量，4) 目标 = 当前关节角 + 增量，交给关节电机
         dq = args.scale * dls_step(J, error, args.damping)
+        # 用"当前实际角度"= 比例控制（P）：稳定，但重力会留下 0.2~0.5 cm 的误差。
+        # 实验过改成 get_dof_position_targets()（累加 = 积分控制 I）：scale=1 会乱舞，
+        # scale=0.05 能把误差消到 ~0，但更慢（平均 1.49s vs 0.81s）。
         q = to_np(franka.get_dof_positions())[0, :7]
         franka.set_dof_position_targets((q + dq).reshape(1, -1), dof_indices=list(range(7)))
 
