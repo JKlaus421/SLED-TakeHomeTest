@@ -73,6 +73,8 @@ PHASES = [
     ("close", [0.0, 0.0, 0.0], FINGER_CLOSED, 0.5, None),  # None：不提前结束，固定等满时间
     ("lift", [0.0, 0.0, 0.30], FINGER_CLOSED, 2.0, 0.01),
     ("hold", [0.0, 0.0, 0.30], FINGER_CLOSED, 1.0, None),
+    ("place", [0.0, 0.0, 0.0], FINGER_CLOSED, 2.0, 0.005),
+    ("release", [0.0, 0.0, 0.0], FINGER_OPEN, 0.5, None),
 ]
 
 rng = np.random.default_rng(args.seed)
@@ -101,16 +103,21 @@ for trial in range(args.trials):
             simulation_app.update()
             if tol is not None and err < tol:
                 break
+        if name == "hold":  # 球马上要被放回去，趁现在记下"举起了多高"
+            lifted = ball_pos()[2] - grasp_center[2]
         fingers = arm.finger_positions()
         print(f"  {name:8s} 用时 {(step + 1) * DT:4.2f}s | 夹爪误差 {err * 100:5.2f} cm | "
               f"手指 {np.round(fingers, 3)} | 球 {np.round(ball_pos(), 3)}")
 
-    # 成功判定：球被抬高了 ≥ 20 cm，并且球心离两指中心 < 2 cm
-    lifted = ball_pos()[2] - grasp_center[2]
-    in_hand = np.linalg.norm(ball_pos() - arm.grasp_pos())
-    ok = lifted > 0.20 and in_hand < 0.02
+    # 成功判定（抓起 → 放回）：
+    #   1) hold 结束时球被举高 ≥ 20 cm   2) 最终离原位 < 2 cm   3) 最终高度和原来差 < 1 cm（没掉下台子）
+    final = ball_pos()
+    moved = np.linalg.norm(final - grasp_center)
+    dz = abs(final[2] - grasp_center[2])
+    ok = lifted > 0.20 and moved < 0.02 and dz < 0.01
     successes += ok
-    print(f"  ==> {'成功' if ok else '失败'}：球抬高 {lifted * 100:.1f} cm，离两指中心 {in_hand * 100:.1f} cm")
+    print(f"  ==> {'成功' if ok else '失败'}：举高 {lifted * 100:.1f} cm | 离原位 {moved * 100:.1f} cm | "
+          f"高度差 {dz * 100:.1f} cm")
 
 print(f"\n[总结] 成功 {successes}/{args.trials}")
 app_utils.stop()
