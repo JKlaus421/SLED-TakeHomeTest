@@ -5,7 +5,7 @@
 内容：
   - 常量：物理步长、READY 姿态、两指中心偏移、夹爪朝下的朝向、手指开合值
   - 四元数小工具：quat_mul / quat_conj / rotate
-  - 抛体：launch_velocity / predict_position（练习 1）
+  - 抛体：launch_velocity / predict_position（练习 1）、crossing_point（下落经过某高度的位置）
   - make_scene()：地面 + 灯光 + Franka，返回 FrankaArm
   - FrankaArm：ik_step()（微分 IK 一步）、set_gripper()、grasp_pos()、reset()
   - add_marker()：纯视觉的小球标记（无物理）
@@ -90,6 +90,26 @@ def predict_position(p0: np.ndarray, v0: np.ndarray, t: float, g: float = G, dt:
     # 只有 z 方向受重力：连续公式往下掉 ½·g·t²，离散积分每秒再多掉 ½·g·dt
     p[2] -= 0.5 * g * t**2 + 0.5 * g * dt * t
     return p
+
+
+def crossing_point(p0: np.ndarray, v0: np.ndarray, z_plane: float, g: float = G, dt: float = DT):
+    """球"往下落"经过高度 z_plane 的时刻和位置；飞不到这个高度则返回 None。
+
+    令 predict_position 的 z 分量 = z_plane：
+        z0 + vz·t − ½g·t² − ½g·dt·t = z_plane
+    整理成 a·t² + b·t + c = 0：a = ½g，b = −(vz − ½g·dt)，c = z_plane − z0
+    两个解里取较大的那个（先往上经过一次，再往下落经过一次）。
+    """
+    a = 0.5 * g
+    b = -(v0[2] - 0.5 * g * dt)
+    c = z_plane - p0[2]
+    disc = b * b - 4 * a * c
+    if disc < 0:  # 判别式 < 0：最高点都没到 z_plane
+        return None
+    t = (-b + np.sqrt(disc)) / (2 * a)  # 较大的解
+    if t <= 0:
+        return None
+    return t, predict_position(p0, v0, t, g, dt)
 
 
 # ---------------------------------------------------------------- 场景
