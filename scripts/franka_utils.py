@@ -5,6 +5,7 @@
 内容：
   - 常量：物理步长、READY 姿态、两指中心偏移、夹爪朝下的朝向、手指开合值
   - 四元数小工具：quat_mul / quat_conj / rotate
+  - 抛体：launch_velocity / predict_position（练习 1）
   - make_scene()：地面 + 灯光 + Franka，返回 FrankaArm
   - FrankaArm：ik_step()（微分 IK 一步）、set_gripper()、grasp_pos()、reset()
   - add_marker()：纯视觉的小球标记（无物理）
@@ -23,6 +24,7 @@ from isaacsim.storage.native import get_assets_root_path
 from pxr import Gf, UsdGeom
 
 DT = 1 / 60  # 物理步长（练习 1 验证过）
+G = 9.81  # 重力加速度，沿 -z 方向
 READY_POSE = [0.0, -0.785, 0.0, -2.356, 0.0, 1.571, 0.785, 0.04, 0.04]
 ARM_DOFS = list(range(7))  # 7 个手臂关节
 FINGER_DOFS = [7, 8]  # 2 根手指（平移关节，单位米）
@@ -69,6 +71,25 @@ def dls_step(J: np.ndarray, error: np.ndarray, damping: float) -> np.ndarray:
     λ 很小时约等于"J 的伪逆 × 误差"；靠近奇异姿态时 λ 防止关节角暴走。
     """
     return J.T @ np.linalg.solve(J @ J.T + damping**2 * np.eye(6), error)
+
+
+# ---------------------------------------------------------------- 抛体（练习 1 写的，含半隐式欧拉补偿）
+
+
+def launch_velocity(p0: np.ndarray, p_target: np.ndarray, T: float, g: float = G, dt: float = DT) -> np.ndarray:
+    """从 p0 出发、T 秒后正好经过 p_target 所需的初速度。"""
+    v0 = (p_target - p0) / T
+    # 重力补偿 ½gT，再加离散积分多掉的 ½g·dt（注意这一项不乘时间）
+    v0[2] += 0.5 * g * T + 0.5 * g * dt
+    return v0
+
+
+def predict_position(p0: np.ndarray, v0: np.ndarray, t: float, g: float = G, dt: float = DT) -> np.ndarray:
+    """从 p0 以 v0 飞出，t 秒后的位置（和仿真逐帧结果完全一致）。"""
+    p = p0 + v0 * t
+    # 只有 z 方向受重力：连续公式往下掉 ½·g·t²，离散积分每秒再多掉 ½·g·dt
+    p[2] -= 0.5 * g * t**2 + 0.5 * g * dt * t
+    return p
 
 
 # ---------------------------------------------------------------- 场景
