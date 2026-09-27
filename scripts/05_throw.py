@@ -141,7 +141,10 @@ for step in range(1, int(total_time / DT) + 1):
     if step == release_step:  # 用"上一帧结束时"的状态作为指令时刻的状态，然后张开手指
         cmd = (step - 1, *ball_state())
         arm.set_gripper(FINGER_OPEN)
-        print(f"----- t={cmd[0] * DT:.2f}s 发出松手指令 -----")
+        # 刹车：7 个手臂关节的目标 = 它们现在的角度 → 电机全力减速，手臂不会再追上球
+        q_now = to_np(arm.robot.get_dof_positions())[0, :7]
+        arm.robot.set_dof_position_targets(q_now.reshape(1, -1), dof_indices=list(range(7)))
+        print(f"----- t={cmd[0] * DT:.2f}s 发出松手指令（同时刹车）-----")
     simulation_app.update()
 
     pos, vel = ball_state()
