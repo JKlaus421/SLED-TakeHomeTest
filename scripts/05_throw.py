@@ -77,16 +77,19 @@ def run_ik_phase(target, finger, max_time, tol):
 
 
 def move_joints(target, duration):
-    """关节空间平滑插值：从当前关节角慢慢过渡到 target（9 个值）。
+    """关节空间平滑插值：7 个手臂关节从当前角度慢慢过渡到 target[:7]。
 
     s 从 0 到 1 按余弦曲线变化 → 起步和结束都慢，中间快，不会猛地一下把球甩掉。
+    手指不参与插值，直接设成 target[7:]：手指被球挡着，实际位置 ≠ 目标，
+    这个差值就是夹紧力。如果从"实际位置"开始插值，一开始目标 = 实际，夹紧力归零，球就掉了。
     """
-    start = to_np(arm.robot.get_dof_positions())[0]
     target = np.asarray(target, dtype=float)
+    start = to_np(arm.robot.get_dof_positions())[0, :7]
+    arm.set_gripper(target[7])
     n = int(duration / DT)
     for i in range(1, n + 1):
         s = 0.5 - 0.5 * np.cos(np.pi * i / n)
-        arm.robot.set_dof_position_targets((start + s * (target - start)).reshape(1, -1))
+        arm.robot.set_dof_position_targets((start + s * (target[:7] - start)).reshape(1, -1), dof_indices=list(range(7)))
         simulation_app.update()
 
 
