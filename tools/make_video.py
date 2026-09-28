@@ -24,9 +24,11 @@ parser.add_argument("--slowmo", type=float, default=1.0, help="播放速度倍�
 parser.add_argument("--name", default="throw")
 parser.add_argument("--gif-width", type=int, default=640, help="GIF 缩小到这个宽度（控制文件大小）")
 parser.add_argument("--no-gif", action="store_true")
+parser.add_argument("--start", type=int, default=0, help="从第几帧开始（截取片段）")
+parser.add_argument("--end", type=int, default=None, help="到第几帧结束（不含）")
 args = parser.parse_args()
 
-files = sorted(Path(args.frames).glob("frame_*.png"))
+files = sorted(Path(args.frames).glob("frame_*.png"))[args.start:args.end]
 if not files:
     raise SystemExit(f"{args.frames} 里没有 frame_*.png，先用 --record 跑一次仿真")
 play_fps = args.fps * args.slowmo
