@@ -4,3 +4,4 @@ outputs/
 videos/
 *.mp4
 *.log
+!media/*.mp4
