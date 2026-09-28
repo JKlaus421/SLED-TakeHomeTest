@@ -172,16 +172,12 @@ def run_trial(basket_xy):
     ball.set_velocities(linear_velocities=[[0.0, 0.0, 0.0]], angular_velocities=[[0.0, 0.0, 0.0]])
     wait(0.5)
 
-    # 抓球 → 后摆（录制时跳过抓球这段：每次都一样，又慢）
-    if rec is not None:
-        rec.paused = True
+    # 抓球 → 后摆
     grasp_center = ball_state()[0]
     run_ik_phase(grasp_center + [0, 0, 0.12], FINGER_OPEN, 3.0, 0.01)
     run_ik_phase(grasp_center, FINGER_OPEN, 2.0, 0.005)
     run_ik_phase(grasp_center, FINGER_CLOSED, 0.5, None)
     run_ik_phase(grasp_center + [0, 0, 0.30], FINGER_CLOSED, 2.0, 0.01)
-    if rec is not None:
-        rec.paused = False
     move_joints([yaw, -0.785, 0.0, -0.07, 0.0, 3.14, Q6, FINGER_CLOSED, FINGER_CLOSED], 2.0)
     wait(0.5)
 
