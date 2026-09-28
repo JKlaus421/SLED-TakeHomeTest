@@ -24,6 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--headless", action="store_true")
 parser.add_argument("--trials", type=int, default=10)
 parser.add_argument("--seed", type=int, default=0)
+parser.add_argument("--record", action="store_true", help="逐帧存图到 outputs/frames（之后用 tools/make_video.py 合成视频）")
 args, _ = parser.parse_known_args()
 
 from isaacsim import SimulationApp
@@ -31,7 +32,7 @@ from isaacsim import SimulationApp
 simulation_app = SimulationApp({"headless": args.headless})
 
 import isaacsim.core.experimental.utils.app as app_utils
-from isaacsim.core.experimental.objects import Cube
+from isaacsim.core.experimental.objects import Cube, DomeLight
 from isaacsim.core.experimental.prims import GeomPrim, RigidPrim
 from franka_utils import (DT, FINGER_CLOSED, FINGER_OPEN, add_marker, crossing_point, make_scene, to_np)
 from pxr import Gf
@@ -58,7 +59,7 @@ OUT_CSV = Path(__file__).resolve().parent.parent / "outputs" / "trials.csv"
 
 # ---------------------------------------------------------------- 场景
 
-arm = make_scene(camera_eye=[0.4, 2.6, 1.6], camera_target=[0.5, 0.0, 0.4])
+arm = make_scene(camera_eye=[0.25, 3.0, 1.3], camera_target=[0.25, 0.0, 0.6])
 Cube("/World/Pedestal", sizes=1.0, scales=[[0.12, 0.12, PEDESTAL_HEIGHT]],
      positions=[[0.5, 0.0, PEDESTAL_HEIGHT / 2]], colors=[[0.5, 0.5, 0.55]])
 GeomPrim("/World/Pedestal", apply_collision_apis=True)
@@ -90,6 +91,20 @@ ball.set_masses([BALL_MASS])
 app_utils.play()
 simulation_app.update()
 
+rec = None
+if args.record:
+    from recorder import FrameRecorder
+
+    DomeLight("/World/DomeLight").set_intensities(600)  # headless 没有环境光，天空是黑的
+    rec = FrameRecorder(OUT_CSV.parent / "frames", every=2)  # 30 fps
+
+
+def tick():
+    """仿真前进一步（录制时顺便截图）。"""
+    simulation_app.update()
+    if rec is not None:
+        rec.step()
+
 
 # ---------------------------------------------------------------- 工具
 
@@ -111,7 +126,7 @@ def run_ik_phase(target, finger, max_time, tol):
     arm.set_gripper(finger)
     for _ in range(int(max_time / DT)):
         err = arm.ik_step(target)
-        simulation_app.update()
+        tick()
         if tol is not None and err < tol:
             break
 
@@ -125,7 +140,7 @@ def move_joints(target, duration):
     for i in range(1, n + 1):
         s = 0.5 - 0.5 * np.cos(np.pi * i / n)
         arm.robot.set_dof_position_targets((start + s * (target[:7] - start)).reshape(1, -1), dof_indices=list(range(7)))
-        simulation_app.update()
+        tick()
 
 
 def release_and_brake():
@@ -136,7 +151,7 @@ def release_and_brake():
 
 def wait(seconds):
     for _ in range(int(seconds / DT)):
-        simulation_app.update()
+        tick()
 
 
 # ---------------------------------------------------------------- 一次试验
@@ -157,12 +172,16 @@ def run_trial(basket_xy):
     ball.set_velocities(linear_velocities=[[0.0, 0.0, 0.0]], angular_velocities=[[0.0, 0.0, 0.0]])
     wait(0.5)
 
-    # 抓球 → 后摆
+    # 抓球 → 后摆（录制时跳过抓球这段：每次都一样，又慢）
+    if rec is not None:
+        rec.paused = True
     grasp_center = ball_state()[0]
     run_ik_phase(grasp_center + [0, 0, 0.12], FINGER_OPEN, 3.0, 0.01)
     run_ik_phase(grasp_center, FINGER_OPEN, 2.0, 0.005)
     run_ik_phase(grasp_center, FINGER_CLOSED, 0.5, None)
     run_ik_phase(grasp_center + [0, 0, 0.30], FINGER_CLOSED, 2.0, 0.01)
+    if rec is not None:
+        rec.paused = False
     move_joints([yaw, -0.785, 0.0, -0.07, 0.0, 3.14, Q6, FINGER_CLOSED, FINGER_CLOSED], 2.0)
     wait(0.5)
 
@@ -172,7 +191,7 @@ def run_trial(basket_xy):
     arm.robot.set_dof_position_targets(np.array(FOLLOW_POSE)[SWING_JOINTS].reshape(1, -1), dof_indices=SWING_JOINTS)
     released, prev_d = None, None
     for step in range(1, int(SWING_TIME / DT) + 1):
-        simulation_app.update()
+        tick()
         pos, vel = ball_state()
         hit = crossing_point(pos, vel, RIM_Z)
         if hit is None:
@@ -196,7 +215,7 @@ def run_trial(basket_xy):
     # 看球落在哪
     actual_cross, prev_pos = None, ball_state()[0]
     for _ in range(int(SETTLE_TIME / DT)):
-        simulation_app.update()
+        tick()
         pos = ball_state()[0]
         if actual_cross is None and prev_pos[2] >= RIM_Z > pos[2]:
             actual_cross = pos
@@ -261,5 +280,7 @@ if n:
         writer.writerows(rows)
     print(f"       结果已写入 {OUT_CSV}")
 
+if rec is not None:
+    rec.close()
 app_utils.stop()
 simulation_app.close()
