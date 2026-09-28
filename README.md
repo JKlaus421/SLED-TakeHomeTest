@@ -153,6 +153,7 @@ The scripts are numbered in the order they were built. Each one is a self-contai
 | `scripts/recorder.py` | Frame capture through a Replicator RGB annotator; dependency-free PNG writer |
 | `tools/make_video.py` | PNG frames → MP4 / GIF |
 | `docs/ROADMAP.md` | Development log with every experiment's numbers (Chinese) |
+| `docs/NOTES_zh.md` | Condensed review notes: concepts, key numbers, lessons learned (Chinese) |
 | `docs/SETUP_zh.md` | Environment setup notes (Chinese) |
 
 Code comments and console output are in Chinese; they were written as learning notes while building the project.
